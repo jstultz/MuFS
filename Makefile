@@ -2,17 +2,22 @@ CC = gcc
 CFLAGS = -D_FILE_OFFSET_BITS=64
 LIBS = -lfuse
 
-all: bin/mufs
+OBJ_DIR = obj
+BIN_DIR = bin
+BIN_DIRS = $(OBJ_DIR) $(BIN_DIR)
 
-bin/mufs: obj/mufs_fuse.o
-	mkdir -p bin
-	$(CC) $(CFLAGS) $(LIBS) -o bin/mufs obj/mufs_fuse.o
+all: $(BIN_DIR)/mufs
 
-obj/mufs_fuse.o: src/mufs_fuse.c
-	mkdir -p obj
-	$(CC) $(CFLAGS) $(LIBS) -o obj/mufs_fuse.o -c src/mufs_fuse.c
+$(BIN_DIRS):
+	if [ ! -d $@ ]; then mkdir -p $@; fi
+
+$(BIN_DIR)/mufs: $(BIN_DIRS) $(OBJ_DIR)/mufs_fuse.o
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $(OBJ_DIR)/mufs_fuse.o
+
+$(OBJ_DIR)/mufs_fuse.o: $(BIN_DIRS) src/mufs_fuse.c
+	$(CC) $(CFLAGS) $(LIBS) -o $@ -c src/mufs_fuse.c
 
 .phony: clean
 
 clean:
-	rm -vf bin/* obj/*
+	rm -rvf $(BIN_DIRS)
