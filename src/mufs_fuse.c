@@ -70,21 +70,11 @@ int main (int argc, char **argv)
 
 static int mufs_getattr(const char *file, struct stat *attr)
 {
-  /* TODO Is this a real media file, or one of our crazy bullshit made up VFS
-     folders? For now, do something really really stupid */
-  int fnamelen = strlen(file);
-  if (strncmp(".mp3", file + fnamelen - 4, 4))
-  {
-    // Probably not an MP3
-    attr->st_mode = 0666;
-  }
-  else
-  {
-    // Supposedly an MP3, find the real shit off the real filesystem.
-    //XXX for now though just to see if the code works, set some other mode
-    attr->st_mode = 0644;
-  }
-
+  /* XXX Assuming for now that we will put all actual media files in as
+     symlinks, and maybe this won't get called for symlinks? If this turns
+     out not to be true, do something nicer here. */
+  memset(attr, 0, sizeof(*attr));
+  attr->st_mode = S_IFDIR | 0555;
   return 0;
 }
 
