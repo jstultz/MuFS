@@ -70,6 +70,21 @@ int main (int argc, char **argv)
 
 static int mufs_getattr(const char *file, struct stat *attr)
 {
+  /* TODO Is this a real media file, or one of our crazy bullshit made up VFS
+     folders? For now, do something really really stupid */
+  int fnamelen = strlen(file);
+  if (strncmp(".mp3", file + fnamelen - 4, 4))
+  {
+    // Probably not an MP3
+    attr->st_mode = 0666;
+  }
+  else
+  {
+    // Supposedly an MP3, find the real shit off the real filesystem.
+    //XXX for now though just to see if the code works, set some other mode
+    attr->st_mode = 0644;
+  }
+
   return 0;
 }
 
