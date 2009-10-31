@@ -1,0 +1,4 @@
+After build, to mount, run:
+  bin/mufs [MOUNTPOINT]
+
+and bask in the glory of IO errors
