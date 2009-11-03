@@ -7,6 +7,11 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
+// TODO put this elsewhere
+typedef char boolean;
+#define TRUE (1)
+#define FALSE (0)
+
 static int mufs_getattr(const char *file, struct stat *attr);
 
 static int mufs_readlink(const char *file, char *tpath, size_t sz);
@@ -70,11 +75,49 @@ int main (int argc, char **argv)
 
 static int mufs_getattr(const char *file, struct stat *attr)
 {
-  /* XXX Assuming for now that we will put all actual media files in as
-     symlinks, and maybe this won't get called for symlinks? If this turns
-     out not to be true, do something nicer here. */
+  /* This should have two code paths; one for files and one for folders. Which
+     of these the filepath is will be determined from the path: if the path is
+     an odd number of tokens (i.e. at the top level, 3rd level, 5th level, etc)
+     and the last token is not a reserved category name (like artist, album)
+     then it is a media file. Otherwise, it is a directory. It might also not
+     exist. */
   memset(attr, 0, sizeof(*attr));
-  attr->st_mode = S_IFDIR | 0555;
+  char path[4096]; // XXX faster than a malloc and probably big enough
+  strcpy(path, file);
+
+  int numtoks = 0;
+  char *pathtok = strtok(path, "/");
+  char *lasttok;
+  boolean isfolder = TRUE;
+  while (pathtok != NULL)
+  {
+    numtoks++;
+    lasttok = pathtok;
+    pathtok = strtok(NULL, "/");
+  }
+
+  if (numtoks % 2)
+    /* TODO this should be better and integrated somewhere with the real set */
+    if (strcmp(pathtok, "artists") &&
+        strcmp(pathtok, "albums") &&
+        strcmp(pathtok, "years") &&
+        strcmp(pathtok, "genres"))
+      isfolder = FALSE;
+    
+
+  if (isfolder)
+  {
+    attr->st_mode = S_IFDIR | 0555;
+    attr->st_nlink = 1; // TODO useful to set this to number of songs inside
+  }
+  else
+  {
+    attr->st_mode = S_IFLNK | 0444;
+    attr->st_nlink = 1;
+  }
+  /* TODO setting the timestamps would be potentially useful.
+     For files, set to the time the file was added to the database.
+     For folders, set to the most recent time a file inside was added. */
   return 0;
 }
 
