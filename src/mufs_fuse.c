@@ -98,10 +98,10 @@ static int mufs_getattr(const char *file, struct stat *attr)
 
   if (numtoks % 2)
     /* TODO this should be better and integrated somewhere with the real set */
-    if (strcmp(pathtok, "artists") &&
-        strcmp(pathtok, "albums") &&
-        strcmp(pathtok, "years") &&
-        strcmp(pathtok, "genres"))
+    if (strcmp(lasttok, "artists") &&
+        strcmp(lasttok, "albums") &&
+        strcmp(lasttok, "years") &&
+        strcmp(lasttok, "genres"))
       isfolder = FALSE;
     
 
