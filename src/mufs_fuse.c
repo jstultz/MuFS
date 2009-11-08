@@ -11,6 +11,28 @@
 typedef char boolean;
 #define TRUE (1)
 #define FALSE (0)
+#define MAXLEN (256)
+
+static char *metatypestrings[] = {
+  "artists",
+  "albums",
+  "genres",
+  "years"
+};
+
+typedef enum
+{
+  ARTIST,
+  ALBUM,
+  GENRE,
+  YEAR,
+  NUM_METATYPES
+} metatype;
+
+typedef struct songdata {
+  char title[MAXLEN];
+  char metadata[NUM_METATYPES][MAXLEN];
+} songdata;
 
 static int mufs_getattr(const char *file, struct stat *attr);
 
@@ -73,47 +95,72 @@ int main (int argc, char **argv)
   return fuse_main(argc, argv, &mufs_oper, NULL); 
 }
 
-static int mufs_getattr(const char *file, struct stat *attr)
+/* Populates struct with info from filepath. */
+static int parsepath(const char *file, songdata *info)
 {
-  /* This should have two code paths; one for files and one for folders. Which
-     of these the filepath is will be determined from the path: if the path is
-     an odd number of tokens (i.e. at the top level, 3rd level, 5th level, etc)
-     and the last token is not a reserved category name (like artist, album)
-     then it is a media file. Otherwise, it is a directory. It might also not
-     exist. */
-  memset(attr, 0, sizeof(*attr));
-  char path[4096]; // XXX faster than a malloc and probably big enough
-  strcpy(path, file);
-
+  char path[4096];
   int numtoks = 0;
-  char *pathtok = strtok(path, "/");
+  char *pathtok;
   char *lasttok;
-  boolean isfolder = TRUE;
+  int i;
+
+  strncpy(path, file, sizeof(path) - 1);
+  pathtok = strtok(path, "/");
+
   while (pathtok != NULL)
   {
     numtoks++;
+    if (numtoks % 2 == 0)
+    {
+      /* This is the name of the artist or genre or whatever. Find out which it
+         is, then add it to the struct */
+      for (i = 0; i < NUM_METATYPES; i++)
+      {
+        if (!strcmp(lasttok, metatypestrings[i]))
+        {
+          strncpy(info->metadata[i], pathtok, MAXLEN-1);
+          break;
+        }
+      }
+    }
     lasttok = pathtok;
     pathtok = strtok(NULL, "/");
   }
-
+  
   if (numtoks % 2)
-    /* TODO this should be better and integrated somewhere with the real set */
-    if (strcmp(lasttok, "artists") &&
-        strcmp(lasttok, "albums") &&
-        strcmp(lasttok, "years") &&
-        strcmp(lasttok, "genres"))
-      isfolder = FALSE;
-    
-
-  if (isfolder)
   {
-    attr->st_mode = S_IFDIR | 0555;
-    attr->st_nlink = 1; // TODO useful to set this to number of songs inside
+    for (i = 0; i < NUM_METATYPES; i++)
+    {
+      if (!strcmp(lasttok, metatypestrings[i]))
+        break;
+    }
+    if (i == NUM_METATYPES)
+    {
+      /* This is not a directory, probably a song */
+      strncpy(info->title, lasttok, MAXLEN-1);
+    }
   }
-  else
+
+  return 0;
+}
+
+static int mufs_getattr(const char *file, struct stat *attr)
+{
+  songdata info;
+  memset(attr, 0, sizeof(*attr));
+  memset(&info, 0, sizeof(info));
+
+  parsepath(file, &info);
+
+  if (info.title[0])
   {
     attr->st_mode = S_IFLNK | 0444;
     attr->st_nlink = 1;
+  }
+  else
+  {
+    attr->st_mode = S_IFDIR | 0555;
+    attr->st_nlink = 1; // TODO useful to set this to number of songs inside
   }
   /* TODO setting the timestamps would be potentially useful.
      For files, set to the time the file was added to the database.
