@@ -11,6 +11,8 @@ static int parsepath(const char *file, songdata *info)
   char *lasttok;
   int i;
 
+  info->trailingmeta = NUM_METATYPES; // This means there isn't one
+
   strncpy(path, file, sizeof(path) - 1);
   pathtok = strtok(path, "/");
 
@@ -39,7 +41,10 @@ static int parsepath(const char *file, songdata *info)
     for (i = 0; i < NUM_METATYPES; i++)
     {
       if (!strcmp(lasttok, metatypestrings[i]))
+      {
+        info->trailingmeta = i;
         break;
+      }
     }
     if (i == NUM_METATYPES)
     {
@@ -77,6 +82,10 @@ static int mufs_getattr(const char *file, struct stat *attr)
 
 static int mufs_readlink(const char *file, char *tpath, size_t sz)
 {
+  songdata info;
+  memset(&info, 0, sizeof(info));
+  parsepath(file, &info);
+  /* TODO build a SQL query based on the file info, fetch symlink info from it*/
   return 0;
 }
 
@@ -98,22 +107,42 @@ static int mufs_release(const char *file, struct fuse_file_info *finfo)
 
 static int mufs_opendir(const char *file, struct fuse_file_info *finfo)
 {
+  /* TODO return an error if this directory doesn't actually exist */
   return 0;
 }
 
 static int mufs_readdir(const char *file, void *buf, fuse_fill_dir_t filler,
                         off_t off, struct fuse_file_info *finfo)
 {
+  songdata info;
+  memset(&info, 0, sizeof(info));
+  int i;
+  parsepath(file, &info);
+
+  /* Should we show meta directories and songs, or category directories? */
+  /* TODO for now instead of querying the DB and showing data, just put a
+     placeholder in. */
+  if (info.trailingmeta == NUM_METATYPES)
+  {
+    for (i = 0; i < NUM_METATYPES; i++)
+      if (info.metadata[i][0] == 0)
+        filler(buf, metatypestrings[i], NULL, 0);
+  }
+  else
+    filler(buf, "placeholder", NULL, 0);
   return 0;
 }
 
 static void * mufs_init(struct fuse_conn_info *conn)
 {
+  /* TODO Probably create database if it doesn't exist. */
+  /* TODO Probably fork off a process to use inotify on filesystems */
   return NULL;
 }
 
 static void mufs_destroy(void *pdata)
 {
+  /* TODO probably kill forked inotify monitoring process */
 }
 
 

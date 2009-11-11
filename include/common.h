@@ -28,4 +28,5 @@ typedef enum
 typedef struct songdata {
   char title[MAXLEN];
   char metadata[NUM_METATYPES][MAXLEN];
+  metatype trailingmeta;
 } songdata;
