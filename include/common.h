@@ -1,8 +1,12 @@
+#ifndef COMMON_H
+#define COMMON_H
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <mysql/mysql.h>
 
 typedef char boolean;
 #define TRUE (1)
@@ -29,4 +33,12 @@ typedef struct songdata {
   char title[MAXLEN];
   char metadata[NUM_METATYPES][MAXLEN];
   metatype trailingmeta;
+  int tracknum;
 } songdata;
+
+typedef struct mufscontext {
+  FILE *logfile;
+  MYSQL *db;
+} mufscontext;
+
+#endif

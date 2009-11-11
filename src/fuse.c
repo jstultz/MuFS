@@ -1,6 +1,7 @@
 #include <common.h>
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
+#include <database.h>
 
 /* Populates struct with info from filepath. */
 static int parsepath(const char *file, songdata *info)
@@ -135,6 +136,18 @@ static int mufs_readdir(const char *file, void *buf, fuse_fill_dir_t filler,
 
 static void * mufs_init(struct fuse_conn_info *conn)
 {
+  mufscontext *ctx = calloc(sizeof(mufscontext), 1);
+  struct fuse_context *fctx = fuse_get_context();
+  fctx->private_data = ctx;
+
+  /* Set up logging */
+  ctx->logfile = fopen("/tmp/mufs", "a");
+
+  fprintf(ctx->logfile, "logfile setup successfully\n");
+  fflush(ctx->logfile);
+
+  dbinit(ctx);
+
   /* TODO Probably create database if it doesn't exist. */
   /* TODO Probably fork off a process to use inotify on filesystems */
   return NULL;
@@ -142,6 +155,10 @@ static void * mufs_init(struct fuse_conn_info *conn)
 
 static void mufs_destroy(void *pdata)
 {
+  struct fuse_context *fctx = fuse_get_context();
+  mufscontext *ctx = fctx->private_data;
+  dbdestroy(ctx);
+  fclose(ctx->logfile);
   /* TODO probably kill forked inotify monitoring process */
 }
 
